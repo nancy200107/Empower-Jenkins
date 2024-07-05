@@ -1,0 +1,76 @@
+pipeline {
+	agent any
+	parameters {
+ 		string(name: 'STORY_NUMBER', defaultValue: '', description: 'Enter the story number to revert changes')
+	}	
+	
+	options { 
+	 	checkoutToSubdirectory("${env.WORKSPACE}") 
+	 	timestamps() // Show log timestamps
+		buildDiscarder(logRotator(numToKeepStr: '50')) // Retain the last 50 builds
+	}
+	
+  	environment { 
+      		BASE_BRANCH = 'demogitrevert'
+	  	REPO_URL = 'https://git.marriott.com/SalesForce/Empower.git' // The URL of your Git repository
+      		OUTPUT_FILE = 'commits.txt' // File to store the commit IDs
+      		//GIT_CREDS = credentials('GIT')
+ 	}
+ 	stages {	
+		stage('Checkout Base Branch') {
+			 environment{
+              			GIT_CREDS = credentials('GIT')
+            			} //environment
+            		steps {
+				ansiColor('xterm') {  
+              					deleteDir()
+                				//clone the repository
+                  				git credentialsId: 'GIT', url: 'https://git.marriott.com/SalesForce/Empower.git'
+                		script {
+                    			// Checkout the demogitrevert branch
+                    			checkout scm
+                    			def srcScmVars = checkout([
+                    			$class: 'GitSCM',
+                    			branches: [[ name: 'origin/*demogitrevert' ]],
+                    			doGenerateSubmoduleConfigurations: false,
+                    			userRemoteConfigs: [[credentialsId: 'GIT', url: 'https://git.marriott.com/SalesForce/Empower.git']]
+                   			])
+                }
+            }
+        }
+	}
+    stage('Search PRs for Story Number') {
+            steps {
+                script {
+                    // Fetch all PRs merged into the base branch
+                    def prCommits = sh(script: """
+                        git log --pretty=format:'%H %s' | grep ${params.STORY_NUMBER} | awk '{print \$1}' | head -n 10
+                    """, returnStdout: true).trim()
+
+                    // Write commit IDs to the output file
+                    writeFile file: "${env.OUTPUT_FILE}", text: commits.join('\n')
+                    // Write the collected commit hashes to the OUTPUT_FILE
+                }
+            }
+        }
+    stage('Push commits.txt to Base Branch') {
+            steps {
+                script {
+                    sh 'git config user.email "nsing218@marriot-sp.com"'
+                    sh 'git config user.name "nsing218"'
+                    
+                    sh 'git add commits.txt'
+                    sh 'git commit -m "Add commits.txt with commit IDs containing ${params.STORY_NUMBER}"'
+                    sh 'git push origin ${env.BASE_BRANCH}'
+                }
+            }
+        
+	post {
+        always {
+            archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: true
+            // Archive the OUTPUT_FILE as an artifact to make it available for download
+        }
+    }
+    }
+}
+}

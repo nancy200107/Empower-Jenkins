@@ -12,7 +12,7 @@ pipeline {
 	
   	environment { 
       		BASE_BRANCH = 'demogitrevert'
-	  	REPO_URL = 'https://git.marriott.com/SalesForce/Empower.git' // The URL of your Git repository
+	  	REPO_URL = 'https://github.com/nancy200107/Empower.git' // The URL of your Git repository
       		OUTPUT_FILE = 'commits.txt' // File to store the commit IDs
       		//GIT_CREDS = credentials('GIT')
  	}
@@ -25,15 +25,15 @@ pipeline {
 				ansiColor('xterm') {  
               					deleteDir()
                 				//clone the repository
-                  				git credentialsId: 'GIT', url: 'https://git.marriott.com/SalesForce/Empower.git'
+                  				git credentialsId: 'GIT', url: 'https://github.com/nancy200107/Empower.git'
                 		script {
                     			// Checkout the demogitrevert branch
                     			checkout scm
                     			def srcScmVars = checkout([
                     			$class: 'GitSCM',
-                    			branches: [[ name: 'origin/*demogitrevert' ]],
+                    			branches: [[ name: 'main/*demogitrevert' ]],
                     			doGenerateSubmoduleConfigurations: false,
-                    			userRemoteConfigs: [[credentialsId: 'GIT', url: 'https://git.marriott.com/SalesForce/Empower.git']]
+                    			userRemoteConfigs: [[credentialsId: 'GIT', url: 'https://github.com/nancy200107/Empower.git']]
                    			])
                 }
             }
